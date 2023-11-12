@@ -41,6 +41,7 @@ private slots:
     void on_framesTreeUpdated();
     void on_selectionChanged(const QItemSelection& selected, const QItemSelection& deselected);
     void on_frameUpdated();
+    void on_publishTransformClicked();
 
 private:
     void updateTransformation(node::Frame::SharedPtr frame);

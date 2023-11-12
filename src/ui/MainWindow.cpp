@@ -16,13 +16,17 @@ MainWindow::MainWindow()
 
     mUi->tree_frames->setModel(&mModel);
 
-    connect(this, &MainWindow::framesTreeUpdated, this, &MainWindow::on_framesTreeUpdated);
     mNode->setCallback(this);
     mNode->startNode();
 
     mSelectionModel = mUi->tree_frames->selectionModel();
+
     connect(mSelectionModel, &QItemSelectionModel::selectionChanged, this,
             &MainWindow::on_selectionChanged);
+    connect(this, &MainWindow::framesTreeUpdated, this, &MainWindow::on_framesTreeUpdated);
+    connect(this, &MainWindow::frameUpdated, this, &MainWindow::on_frameUpdated);
+    connect(mUi->button_publish_transform, &QPushButton::clicked, this,
+            &MainWindow::on_publishTransformClicked);
 }
 
 MainWindow::~MainWindow() { delete mUi; }
@@ -46,6 +50,7 @@ void MainWindow::on_framesTreeUpdated()
 
 void MainWindow::on_frameUpdated()
 {
+    qDebug() << "On frames updates";
     auto itemSelected = mSelectionModel->selection();
     on_selectionChanged(itemSelected, itemSelected /*This parameter not used*/);
 }
@@ -55,9 +60,39 @@ void MainWindow::on_selectionChanged(const QItemSelection& selected, const QItem
     if (!selected.isEmpty()) {
         auto frame_id = mModel.data(selected.indexes().at(0), Qt::DisplayRole);
         auto frame = mNode->getNode(frame_id.toString().toStdString());
+        if (frame->parent.lock() != nullptr) {
+            mUi->button_publish_transform->setEnabled(true);
+        }
+        else {
+            mUi->button_publish_transform->setEnabled(false);
+        }
+
         updateTransformation(frame);
         updateCalculatedTransformation(frame);
     }
+}
+
+void MainWindow::on_publishTransformClicked()
+{
+    auto selected = mSelectionModel->selection();
+    auto frame_id = mModel.data(selected.indexes().at(0), Qt::DisplayRole);
+    auto frame = mNode->getNode(frame_id.toString().toStdString());
+    auto parentFrame = frame->parent.lock();
+    auto isStatic = mUi->check_static_transform->isChecked();
+
+    node::Position position;
+    node::Orientation orientation;
+
+    position.x = mUi->line_transform_x->text().toDouble();
+    position.y = mUi->line_transform_y->text().toDouble();
+    position.z = mUi->line_transform_z->text().toDouble();
+
+    orientation.roll = mUi->line_transform_roll->text().toDouble();
+    orientation.pitch = mUi->line_transform_pitch->text().toDouble();
+    orientation.yaw = mUi->line_transform_yaw->text().toDouble();
+
+    mNode->publishTransform(parentFrame->frame_id.c_str(), frame->frame_id.c_str(), position,
+                            orientation, isStatic);
 }
 
 void MainWindow::updateTransformation(node::Frame::SharedPtr frame)

@@ -26,6 +26,9 @@ MonitorNode::MonitorNode()
 
     mTfStaticSubscription = create_subscription<tf2_msgs::msg::TFMessage>(
         "/tf_static", qos, std::bind(&MonitorNode::onTransformation, this, _1));
+
+    mTfPublisher = create_publisher<tf2_msgs::msg::TFMessage>("/tf", 10);
+    mTfStaticPublisher = create_publisher<tf2_msgs::msg::TFMessage>("/tf_static", qos);
 }
 
 MonitorNode::~MonitorNode()
@@ -59,6 +62,47 @@ void MonitorNode::stopNode()
 }
 
 void MonitorNode::setCallback(MonitorNodeListener* callback) { mCallback = callback; }
+
+geometry_msgs::msg::Quaternion rpyToQuaternion(Orientation orientation)
+{
+    tf2::Quaternion tfQuat;
+    tfQuat.setRPY(orientation.roll * M_PI / 180.0, orientation.pitch * M_PI / 180.0,
+                  orientation.yaw * M_PI / 180.0);
+
+    geometry_msgs::msg::Quaternion geomQuat;
+    geomQuat.x = tfQuat.x();
+    geomQuat.y = tfQuat.y();
+    geomQuat.z = tfQuat.z();
+    geomQuat.w = tfQuat.w();
+
+    return geomQuat;
+}
+
+void MonitorNode::publishTransform(const char* parent,
+                                   const char* child,
+                                   Position position,
+                                   Orientation orientation,
+                                   bool isStatic)
+{
+    geometry_msgs::msg::TransformStamped transform;
+    transform.header.frame_id = parent;
+    transform.header.stamp = get_clock()->now();
+    transform.child_frame_id = child;
+    transform.transform.translation.x = position.x;
+    transform.transform.translation.y = position.y;
+    transform.transform.translation.z = position.z;
+    transform.transform.rotation = rpyToQuaternion(orientation);
+
+    tf2_msgs::msg::TFMessage msg;
+    msg.transforms.push_back(transform);
+
+    if (isStatic) {
+        mTfStaticPublisher->publish(msg);
+    }
+    else {
+        mTfPublisher->publish(msg);
+    }
+}
 
 Orientation toRPY(const geometry_msgs::msg::Quaternion& q)
 {
@@ -159,7 +203,7 @@ void MonitorNode::updateFramesTree(const std::string& frame_id,
             }
         }
         else {
-            // (*iter)->transform = (*iter)->original_transform = transform;
+            (*iter)->transform = (*iter)->transform = transform;
             if (mCallback != nullptr) {
                 mCallback->onFrameTransformationUpdated();
             }

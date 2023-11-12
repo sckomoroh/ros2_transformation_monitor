@@ -388,7 +388,10 @@
              </spacer>
             </item>
             <item>
-             <widget class="QPushButton" name="push_publish_transform">
+             <widget class="QPushButton" name="button_publish_transform">
+              <property name="enabled">
+               <bool>false</bool>
+              </property>
               <property name="text">
                <string>Publish transformation</string>
               </property>

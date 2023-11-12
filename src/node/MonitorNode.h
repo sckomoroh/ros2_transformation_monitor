@@ -78,6 +78,8 @@ class MonitorNode : public rclcpp::Node {
 private:
     rclcpp::Subscription<tf2_msgs::msg::TFMessage>::SharedPtr mTfSubscription;
     rclcpp::Subscription<tf2_msgs::msg::TFMessage>::SharedPtr mTfStaticSubscription;
+    rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr mTfPublisher;
+    rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr mTfStaticPublisher;
     Frame::SharedPtr mRootFrame;
     bool mRun = true;
     std::thread mThread;
@@ -93,6 +95,12 @@ public:
     void stopNode();
     void setCallback(MonitorNodeListener* callback);
 
+    void publishTransform(const char* parent,
+                          const char* child,
+                          Position position,
+                          Orientation orientation,
+                          bool isStatic);
+
     Frame::SharedPtr getRootNode();
     Frame::SharedPtr getNode(const std::string& frame_id);
 
@@ -105,8 +113,7 @@ private:
 
     void nodeSpin();
 
-    Frame::SharedPtr findParentFrame(const Frame::SharedPtr rootFrame,
-                                           const std::string& frame_id);
+    Frame::SharedPtr findParentFrame(const Frame::SharedPtr rootFrame, const std::string& frame_id);
 };
 
 }  // namespace tf::tools::node
