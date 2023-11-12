@@ -3,6 +3,7 @@
 #include <rclcpp/rclcpp.hpp>
 
 #include <QCloseEvent>
+#include <QSettings>
 
 #include "ui_MainWindow.h"
 
@@ -14,6 +15,9 @@ MainWindow::MainWindow()
 {
     mUi->setupUi(this);
 
+    QSettings settings("SelfProduction", "TF_monitor");
+    restoreState(settings.value("windowState").toByteArray());
+
     mUi->tree_frames->setModel(&mModel);
 
     mNode->setCallback(this);
@@ -23,16 +27,42 @@ MainWindow::MainWindow()
 
     connect(mSelectionModel, &QItemSelectionModel::selectionChanged, this,
             &MainWindow::on_selectionChanged);
-    connect(this, &MainWindow::framesTreeUpdated, this, &MainWindow::on_framesTreeUpdated);
-    connect(this, &MainWindow::frameUpdated, this, &MainWindow::on_frameUpdated);
-    connect(mUi->button_publish_transform, &QPushButton::clicked, this,
-            &MainWindow::on_publishTransformClicked);
+    connect(this, &MainWindow::framesTreeUpdated, this, [this]() {
+        auto rootNode = mNode->getRootNode();
+        mModel.updateModel(rootNode);
+    });
+    connect(this, &MainWindow::frameUpdated, this, [this]() {
+        auto itemSelected = mSelectionModel->selection();
+        on_selectionChanged(itemSelected, itemSelected /*This parameter not used*/);
+    });
+
+    mUi->action_calculated->setChecked(mUi->dock_calculated->isVisible());
+    mUi->action_transform->setChecked(mUi->dock_transform->isVisible());
+    mUi->action_original->setChecked(mUi->dock_original->isVisible());
+
+    connect(mUi->dock_calculated, &QDockWidget::visibilityChanged, this,
+            [this]() { mUi->action_calculated->setChecked(mUi->dock_calculated->isVisible()); });
+    connect(mUi->action_calculated, &QAction::triggered, this,
+            [this]() { mUi->dock_calculated->setVisible(!mUi->dock_calculated->isVisible()); });
+
+    connect(mUi->dock_transform, &QDockWidget::visibilityChanged, this,
+            [this]() { mUi->action_transform->setChecked(mUi->dock_transform->isVisible()); });
+    connect(mUi->action_transform, &QAction::triggered, this,
+            [this]() { mUi->dock_transform->setVisible(!mUi->dock_transform->isVisible()); });
+
+    connect(mUi->dock_original, &QDockWidget::visibilityChanged, this,
+            [this]() { mUi->action_original->setChecked(mUi->dock_original->isVisible()); });
+    connect(mUi->action_original, &QAction::triggered, this,
+            [this]() { mUi->dock_original->setVisible(!mUi->dock_original->isVisible()); });
 }
 
 MainWindow::~MainWindow() { delete mUi; }
 
 void MainWindow::closeEvent(QCloseEvent* event)
 {
+    QSettings settings("SelfProduction", "TF_monitor");
+    settings.setValue("windowState", saveState());
+
     mNode->stopNode();
     rclcpp::shutdown();
     event->accept();
@@ -41,19 +71,6 @@ void MainWindow::closeEvent(QCloseEvent* event)
 void MainWindow::onFramesTreeUpdated() { emit framesTreeUpdated(); }
 
 void MainWindow::onFrameTransformationUpdated() { emit frameUpdated(); }
-
-void MainWindow::on_framesTreeUpdated()
-{
-    auto rootNode = mNode->getRootNode();
-    mModel.updateModel(rootNode);
-}
-
-void MainWindow::on_frameUpdated()
-{
-    //qDebug() << "On frames updates";
-    auto itemSelected = mSelectionModel->selection();
-    on_selectionChanged(itemSelected, itemSelected /*This parameter not used*/);
-}
 
 void MainWindow::on_selectionChanged(const QItemSelection& selected, const QItemSelection&)
 {

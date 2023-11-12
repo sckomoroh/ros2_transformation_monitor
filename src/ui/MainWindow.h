@@ -1,7 +1,7 @@
 #pragma once
 
-#include <QDialog>
 #include <QItemSelection>
+#include <QMainWindow>
 
 #include "models/FrameTreeModel.h"
 #include "node/MonitorNode.h"
@@ -13,7 +13,7 @@ class MainWindow;
 namespace tf::tools::ui {
 
 class MainWindow final
-    : public QDialog
+    : public QMainWindow
     , public node::MonitorNodeListener {
     Q_OBJECT
 private:
@@ -38,9 +38,7 @@ protected:
     void closeEvent(QCloseEvent* event) override;
 
 private slots:
-    void on_framesTreeUpdated();
     void on_selectionChanged(const QItemSelection& selected, const QItemSelection& deselected);
-    void on_frameUpdated();
     void on_publishTransformClicked();
 
 private:
