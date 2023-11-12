@@ -50,7 +50,7 @@ void MainWindow::on_framesTreeUpdated()
 
 void MainWindow::on_frameUpdated()
 {
-    qDebug() << "On frames updates";
+    //qDebug() << "On frames updates";
     auto itemSelected = mSelectionModel->selection();
     on_selectionChanged(itemSelected, itemSelected /*This parameter not used*/);
 }
